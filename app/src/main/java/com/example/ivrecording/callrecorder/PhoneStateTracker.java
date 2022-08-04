@@ -1,7 +1,6 @@
 package com.example.ivrecording.callrecorder;
 
 import static android.content.Context.MODE_PRIVATE;
-
 import static com.example.ivrecording.Database.IvrDatabase.Table_Call_Reports;
 
 import android.content.BroadcastReceiver;
@@ -15,12 +14,14 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
 import android.provider.CallLog;
 import android.provider.ContactsContract;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.Base64;
+import android.util.Log;
 import android.widget.Toast;
 
 import com.android.volley.AuthFailureError;
@@ -38,6 +39,8 @@ import com.example.ivrecording.Extra.Common;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -52,6 +55,7 @@ public class PhoneStateTracker {
     CallStateListener callStateListener;
     String contact_no = "", callType = "", call_status = "", file_name = "";
     int call_duration = 0;
+    String logData = "";
 
     public PhoneStateTracker(Context ctx) {
         this.ctx = ctx;
@@ -85,6 +89,7 @@ public class PhoneStateTracker {
     }
 
     private String getLatestFilefromDir(String dirPath) {
+        logData = logData + "getting latest file::";
         File dir = new File(dirPath);
         File[] files = dir.listFiles();
         if (files == null || files.length == 0) {
@@ -102,9 +107,11 @@ public class PhoneStateTracker {
 
     private void getSystemRecording(String recording_store_path, String number) {
         try {
+
             String latest_file_name;
             latest_file_name = getLatestFilefromDir(recording_store_path);
             boolean isFound = false;
+            logData = logData + "isFound " + isFound + "::";
             try {
                  isFound = latest_file_name.contains(number);
             }
@@ -125,6 +132,7 @@ public class PhoneStateTracker {
                     boolean isNameFound = false;
                     try {
                         isNameFound = latest_file_name.contains(getContactName(ctx, number));
+                        logData = logData + "isNameFound " + isNameFound + "::";
                     }
                     catch (Exception e){
                         e.printStackTrace();
@@ -138,6 +146,7 @@ public class PhoneStateTracker {
                 }
             }
         } catch (Exception e) {
+            logData = logData + "exception 1::";
             e.printStackTrace();
         }
     }
@@ -168,7 +177,7 @@ public class PhoneStateTracker {
         String recording_store_path = "", uploadFilePath = "", start_time = "", extension = "NA", recording = "NA";
         callType = "";
         call_status = "";
-
+        logData = logData + " \n \n start::";
         //Get Recording storage path of mobile device from shared prefs
         SharedPreferences sharedPreference = context.getSharedPreferences(Common.UserData, MODE_PRIVATE);
         recording_store_path = sharedPreference.getString("recording_details", "");
@@ -234,11 +243,13 @@ public class PhoneStateTracker {
                 } else {
                     call_status = "Answered";
                     getSystemRecording(recording_store_path, contact_no);
+                    logData = logData + "filename " + file_name + "::";
                     if (!file_name.equals("Not Available") && !file_name.equals("")) {
                         //Upload recording
                         File sampleDir = new File(recording_store_path);
                         uploadFilePath = sampleDir + "/" + file_name;
                         File file = new File(uploadFilePath);
+                        logData = logData + "fileexist " + file.exists() + "::";
                         if (file.exists()) {
 //                            Toast.makeText(ctx, file_name, Toast.LENGTH_LONG).show();
                             extension = file_name.substring(file_name.lastIndexOf(".") + 1);
@@ -248,6 +259,10 @@ public class PhoneStateTracker {
                         }
                     }
                 }
+
+                logData = logData + "last recording length" + recording.length() + "::";
+                logData = logData + "last path" + uploadFilePath + "::";
+                writeToFile(logData);
 
                 SharedPreferences sharedPref = context.getSharedPreferences("UserData", MODE_PRIVATE);
                 SharedPreferences.Editor editor = sharedPref.edit();
@@ -344,6 +359,7 @@ public class PhoneStateTracker {
             //Delete File
 //            sourceLocation.delete();
         } catch (Exception e) {
+            logData = logData + "exception 4::";
             e.printStackTrace();
         }
     }
@@ -365,11 +381,14 @@ public class PhoneStateTracker {
                 byte[] encodeFile = Base64.encode(ByteArray, 0);
                 bsfile = new String(encodeFile);
             } catch (Exception e) {
+                logData = logData + "exception 2::";
                 e.printStackTrace();
             }
         } catch (Exception e) {
+            logData = logData + "exception 3::";
             e.printStackTrace();
         }
+        logData = logData + "recording length" + bsfile.length() + "::";
         return bsfile;
     }
 
@@ -422,6 +441,36 @@ public class PhoneStateTracker {
             requestQueue.add(stringRequest);
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    private void writeToFile(String data) {
+        File dir = null;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS) + "/" + "IVR");
+        } else {
+            dir = new File(Environment.getExternalStorageDirectory() + "/" + "IVR");
+        }
+
+        // Make sure the path directory exists.
+        if (!dir.exists()) {
+            // Make it, if it doesn't exit
+            boolean success = dir.mkdirs();
+            if (!success) {
+                dir = null;
+            }
+        }
+        try {
+            //File dir = new File(fullPath);
+
+            OutputStream fOut = null;
+            File file = new File(dir, "ivrcalllogs.txt");
+            fOut = new FileOutputStream(file, true);
+            fOut.write(data.getBytes());
+            fOut.flush();
+            fOut.close();
+        } catch (Exception e) {
+            Log.e("saveToExternalStorage()", e.getMessage());
         }
     }
 }

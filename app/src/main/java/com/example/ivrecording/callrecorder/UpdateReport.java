@@ -29,7 +29,6 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
@@ -107,6 +106,7 @@ public class UpdateReport {
                     Map<String, String> params = new HashMap<String, String>();
                     params.put("Content-Type", "application/x-www-form-urlencoded");
                     params.put("Authorization", "Bearer " + UserToken);
+                    Log.e("TAG", "getHeaders: " + params);
                     return params;
                 }
 
@@ -123,6 +123,7 @@ public class UpdateReport {
                     params.put("call_end_time", end_time);
                     params.put("call_recording", recording);
                     params.put("file_extension", extension);
+                    Log.e("TAG", "getParams: " + params);
                     return params;
                 }
             };
