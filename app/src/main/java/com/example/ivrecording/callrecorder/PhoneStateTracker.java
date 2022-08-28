@@ -209,11 +209,13 @@ public class PhoneStateTracker {
                 contact_no = phNum;
             }
 
+            logData = logData + " contact "+contact_no+"::";
+
             String strcallDate = managedCursor.getString(dat);
 
             Date callDate = new Date(Long.parseLong(strcallDate));
             start_time = df.format(callDate);
-
+            logData = logData + " starttime "+start_time+"::";
             String end_time = df.format(Calendar.getInstance().getTime());
 
             String callTypeCode = managedCursor.getString(type);
