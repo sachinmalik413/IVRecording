@@ -15,6 +15,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.Build;
+import android.os.CountDownTimer;
 import android.os.Environment;
 import android.provider.CallLog;
 import android.provider.ContactsContract;
@@ -56,6 +57,7 @@ public class PhoneStateTracker {
     String contact_no = "", callType = "", call_status = "", file_name = "";
     int call_duration = 0;
     String logData = "";
+    String phoneData = "";
 
     public PhoneStateTracker(Context ctx) {
         this.ctx = ctx;
@@ -93,15 +95,21 @@ public class PhoneStateTracker {
         File dir = new File(dirPath);
         File[] files = dir.listFiles();
         if (files == null || files.length == 0) {
+            Log.e("TAG", "getLatestFilefromDir: "+ files);
+            phoneData = phoneData + "length 0";
             return null;
         }
 
+        phoneData = phoneData + "length "+ files.length;
+
         File lastModifiedFile = files[0];
         for (int i = 1; i < files.length; i++) {
+            phoneData = phoneData + "file "+i+" "+files[i].getName()+" \n";
             if (lastModifiedFile.lastModified() < files[i].lastModified()) {
                 lastModifiedFile = files[i];
             }
         }
+        phoneData = phoneData + "chosen file "+lastModifiedFile.getName();
         return lastModifiedFile.getName();
     }
 
@@ -178,6 +186,8 @@ public class PhoneStateTracker {
         callType = "";
         call_status = "";
         logData = logData + " \n \n start::";
+
+        phoneData = phoneData + "\n \n";
         //Get Recording storage path of mobile device from shared prefs
         SharedPreferences sharedPreference = context.getSharedPreferences(Common.UserData, MODE_PRIVATE);
         recording_store_path = sharedPreference.getString("recording_details", "");
@@ -210,12 +220,14 @@ public class PhoneStateTracker {
             }
 
             logData = logData + " contact "+contact_no+"::";
+            phoneData = phoneData + " contact "+contact_no+"::";
 
             String strcallDate = managedCursor.getString(dat);
 
             Date callDate = new Date(Long.parseLong(strcallDate));
             start_time = df.format(callDate);
             logData = logData + " starttime "+start_time+"::";
+            phoneData = phoneData + " starttime "+start_time+"::";
             String end_time = df.format(Calendar.getInstance().getTime());
 
             String callTypeCode = managedCursor.getString(type);
@@ -244,6 +256,7 @@ public class PhoneStateTracker {
                     call_status = "Not Answered";
                 } else {
                     call_status = "Answered";
+                    Log.e("TAG", "recording_store_path: "+recording_store_path );
                     getSystemRecording(recording_store_path, contact_no);
                     logData = logData + "filename " + file_name + "::";
                     if (!file_name.equals("Not Available") && !file_name.equals("")) {
@@ -264,8 +277,9 @@ public class PhoneStateTracker {
 
                 logData = logData + "last recording length" + recording.length() + "::";
                 logData = logData + "last path" + uploadFilePath + "::";
+                Log.e("TAG", "call_detail: "+logData );
                 writeToFile(logData);
-
+                writeToLogs(phoneData);
                 SharedPreferences sharedPref = context.getSharedPreferences("UserData", MODE_PRIVATE);
                 SharedPreferences.Editor editor = sharedPref.edit();
                 editor.putString("calling_number", "");
@@ -343,7 +357,18 @@ public class PhoneStateTracker {
                     SharedPreferences sharedPreference = ctx.getSharedPreferences("UserData", MODE_PRIVATE);
                     String calling_number = sharedPreference.getString("calling_number", "");
                     if (!calling_number.equals("")) {
-                        call_detail(ctx);
+                        new CountDownTimer(3000, 1000) {
+
+                            public void onTick(long millisUntilFinished) {
+
+                            }
+
+                            public void onFinish() {
+                                call_detail(ctx);
+                            }
+
+                        }.start();
+
                     }
                     break;
             }
@@ -467,6 +492,36 @@ public class PhoneStateTracker {
 
             OutputStream fOut = null;
             File file = new File(dir, "ivrcalllogs.txt");
+            fOut = new FileOutputStream(file, true);
+            fOut.write(data.getBytes());
+            fOut.flush();
+            fOut.close();
+        } catch (Exception e) {
+            Log.e("saveToExternalStorage()", e.getMessage());
+        }
+    }
+
+    private void writeToLogs(String data) {
+        File dir = null;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS) + "/" + "IVR");
+        } else {
+            dir = new File(Environment.getExternalStorageDirectory() + "/" + "IVR");
+        }
+
+        // Make sure the path directory exists.
+        if (!dir.exists()) {
+            // Make it, if it doesn't exit
+            boolean success = dir.mkdirs();
+            if (!success) {
+                dir = null;
+            }
+        }
+        try {
+            //File dir = new File(fullPath);
+
+            OutputStream fOut = null;
+            File file = new File(dir, "ivrphonelogs.txt");
             fOut = new FileOutputStream(file, true);
             fOut.write(data.getBytes());
             fOut.flush();

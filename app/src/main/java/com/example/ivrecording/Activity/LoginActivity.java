@@ -226,7 +226,7 @@ public class LoginActivity extends AppCompatActivity {
                         department_id = userdata.getString("department_id");
                         role_id = userdata.getString("role_id");
                         recording_details = userdata.getString("recording_details");
-
+                        Log.e("TAG", "LoginApiSucces: "+recording_details );
                         editor.putString(Common.UserToken, api_token);
                         editor.putString("mobile", user_mobile);
                         editor.putString("user_name", user_name);

@@ -96,6 +96,7 @@ public class UpdateReport {
                     //Handle your error code here
                     String data = number+" "+call_type+" "+call_status+" "+call_duration+" "+start_time+" "+filepath;
                     data = data+" apistatus:"+error.networkResponse.toString()+" , recording retained \n \n";
+                    //Log.e("TAG", "onErrorResponse: "+data );
                     writeToFile(data);
                     Toast.makeText(m_context, "Something Went Wrong", Toast.LENGTH_LONG).show();
                     updateStatus("No", id);
@@ -156,6 +157,7 @@ public class UpdateReport {
             } else {
                 data = data+" apistatus:"+status+" , recording retained \n \n";
                 writeToFile(data);
+                //Log.e("TAG", "AfterUploadTask: "+data );
                 updateStatus("No", id);
                 Toast.makeText(m_context, "Report Not Updated", Toast.LENGTH_LONG).show();
             }
